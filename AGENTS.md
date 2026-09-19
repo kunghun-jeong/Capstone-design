@@ -23,8 +23,31 @@ r_i,t+h = r_S,t+h + ε_i,t+h
 ## Stack
 
 Python 생태계. 확정된 것: pandas 계열 데이터 처리, GBDT(LightGBM 등), PyTorch 계열 딥러닝, 실험 추적은
-MLflow 예정. **아직 미확정:** 정확한 패키지 목록/버전, 패키지 매니저(pip/uv/poetry), 디렉토리 구조.
+MLflow 예정. **아직 미확정:** 정확한 패키지 목록/버전, 패키지 매니저(pip/uv/poetry).
 확정되는 대로 이 섹션을 업데이트할 것.
+
+## Directory structure
+
+파이프라인 단계 순서를 그대로 반영한 구조다 (데이터 → 피처 → 모델 A/B → 백테스팅).
+
+```
+configs/                     # 하이퍼파라미터, 학습 기간, 티커 목록 등 설정 (yaml 예정)
+data/{raw,interim,processed} # 데이터 산출물 — 전부 gitignore, 코드만 레포에 남음
+src/capstone/
+  data/                      # 수집/전처리 파이프라인 (뉴스, reddit, ohlcv, macro)
+  features/                  # 피처 엔지니어링 (기술지표, 시점정합, 텍스트 인코딩)
+  models/model_a/            # 섹터 타이밍 (매크로 시계열)
+  models/model_b/            # 종목 선별 (텍스트 랭킹)
+  backtest/                  # walk-forward 백테스팅, ablation 사다리
+  eval/                      # 평가지표 (IC, 방향적중률, Sharpe)
+notebooks/                    # 탐색/실험용 노트북
+scripts/                      # CLI 진입점 (데이터 다운로드, 학습 실행 등)
+tests/                        # pytest, src/ 구조 미러링
+```
+
+지금은 각 디렉토리에 `__init__.py`/`.gitkeep`만 있는 빈 스캐폴드다. 실제 코드가 들어가면 이 목록은
+자연히 최신 상태를 반영하게 되므로, 코드 구조가 크게 바뀌지 않는 한 이 섹션을 따로 갱신할 필요는
+없다.
 
 ## Setup
 
@@ -80,9 +103,15 @@ python -m venv .venv && source .venv/bin/activate
 
 ## Branches
 
-4명이 같은 주에 다른 파트(데이터 파이프라인/모델 A/모델 B/백테스팅 등)를 동시에 작업할 가능성이 높은
-학기 프로젝트다. `feature/<작업 내용>` 브랜치에서 작업하고 PR로 `main`에 병합한다. 리뷰는 최소 1명
-권장(과목 특성상 강제하지는 않되, 서로 다른 파트를 건드리는 큰 변경은 리뷰를 거치는 게 안전하다).
+작업은 파이프라인 순서를 따르는 단계형 프로젝트다 — 병렬성은 항상 있는 게 아니라 단계별로 다르다.
+
+1. **데이터 수집/전처리** — 모델이 시작할 수 있는 선행 조건이라 병목 구간. 4명 전원이 같이 진행.
+2. **모델 A / 모델 B** — 설계상 독립 학습 후 합산하는 구조라 이 단계에서만 2명씩 나눠 병렬 진행.
+3. **백테스팅/평가** — 모델 A·B 결과가 모두 있어야 시작 가능한 후행 단계.
+
+`feature/<작업 내용>` 브랜치에서 작업하고 PR로 `main`에 병합한다. 리뷰는 최소 1명 권장(과목 특성상
+강제하지는 않되, 다음 단계의 전제가 되는 변경 — 특히 1단계 데이터 파이프라인 — 은 리뷰를 거치는 게
+안전하다).
 
 ## Handoff
 
@@ -92,9 +121,11 @@ python -m venv .venv && source .venv/bin/activate
 
 ## Multi-agent notes
 
-- 4명이 각자 다른 파트를 동시에 작업할 수 있으므로, 되도록 각자 자기 파트 디렉토리 밖은 건드리지 않는
-  걸 기본으로 한다. `AGENTS.md`, `requirements.txt` 등 공용 파일을 같은 시점에 고쳐야 하면, 각자
-  브랜치에서 고치고 PR로 합친다 — 직접 `main`에서 동시에 고치지 않는다.
+- 1단계(데이터)와 3단계(백테스팅)는 전원이 같은 `src/capstone/data/`(또는 `backtest/`)를 동시에
+  건드릴 수 있다는 뜻이므로 커밋 단위를 작게 유지하고 자주 병합할 것. 2단계(모델 A/B)에서는 각자
+  `models/model_a/` 또는 `models/model_b/` 밖을 건드리지 않는 걸 기본으로 한다.
+- `AGENTS.md`, `requirements.txt` 등 공용 파일을 같은 시점에 고쳐야 하면, 각자 브랜치에서 고치고
+  PR로 합친다 — 직접 `main`에서 동시에 고치지 않는다.
 - 어떤 AI 코딩 도구를 쓸지는 아직 팀 내 확정 전이다. Claude Code 외 다른 도구(Cursor, Copilot, Gemini
   CLI 등)를 쓰는 팀원이 생기면, 해당 도구의 adapter 파일을 하나 추가하면 된다 (이 파일이 이미 단일
   소스이므로 새 adapter는 짧은 pointer 파일이면 충분하다).

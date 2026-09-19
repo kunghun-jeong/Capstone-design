@@ -14,6 +14,14 @@ venv/
 # Experiment tracking
 mlruns/
 
+# Data (raw/intermediate/processed — 용량·라이선스 문제로 레포엔 코드만, 데이터는 로컬/외부 스토리지)
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
 # OS / editor
 .DS_Store
 .vscode/
