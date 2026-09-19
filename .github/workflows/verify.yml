@@ -1,0 +1,27 @@
+# 최소 검증 게이트. 지금은 lint/test 커맨드가 아직 없어서 checkout만 하는 빈 스텁이다.
+# AGENTS.md의 "Build, run, and verify" 표에 실제 커맨드가 채워지면, 아래 placeholder 스텝들을
+# 그 커맨드로 바꿀 것 — 이 파일과 AGENTS.md가 서로 다른 커맨드를 말하게 두지 말 것.
+
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: (placeholder) lint
+        run: echo "TODO: AGENTS.md에 lint 커맨드가 정해지면 여기로 옮길 것"
+
+      - name: (placeholder) test
+        run: echo "TODO: AGENTS.md에 test 커맨드가 정해지면 여기로 옮길 것"

@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Secrets
+.env
+.env.*
+*.key
+
+# Experiment tracking
+mlruns/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
