@@ -10,4 +10,4 @@ tickers:
   - MPWR
   - VICR
   - ADI
-  - ON
+  - "ON"   # YAML에서 따옴표 없는 ON은 불리언 true로 해석되므로 반드시 따옴표

@@ -65,7 +65,11 @@ def load_universe(config_path: Path) -> list[str]:
 
     with open(config_path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
-    return [str(t).upper() for t in cfg["tickers"]]
+    tickers = cfg["tickers"]
+    bad = [t for t in tickers if not isinstance(t, str)]
+    if bad:  # 예: 따옴표 없는 ON/NO/Y 는 YAML에서 bool로 파싱된다
+        raise ValueError(f"티커는 문자열이어야 한다 (따옴표 확인): {bad}")
+    return [t.upper() for t in tickers]
 
 
 @dataclass

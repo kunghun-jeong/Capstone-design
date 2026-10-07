@@ -123,3 +123,14 @@ def test_collect_symbol_dedups_by_id_when_state_lost(tmp_path):
     collect_symbol(client, "NVDA", date(2016, 1, 1), date(2016, 1, 31), tmp_path, progress=lambda _: None)
     ids = [json.loads(x)["id"] for x in (tmp_path / "NVDA" / "2016.jsonl").read_text().splitlines()]
     assert ids == [1, 2]
+
+
+def test_load_universe_rejects_unquoted_on(tmp_path):
+    from capstone.data.alpaca_news import load_universe
+
+    cfg = tmp_path / "u.yaml"
+    cfg.write_text("tickers:\n  - NVDA\n  - ON\n")
+    with pytest.raises(ValueError):
+        load_universe(cfg)
+    cfg.write_text('tickers:\n  - NVDA\n  - "ON"\n')
+    assert load_universe(cfg) == ["NVDA", "ON"]
