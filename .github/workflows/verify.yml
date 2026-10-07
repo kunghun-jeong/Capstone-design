@@ -23,5 +23,8 @@ jobs:
       - name: (placeholder) lint
         run: echo "TODO: AGENTS.md에 lint 커맨드가 정해지면 여기로 옮길 것"
 
-      - name: (placeholder) test
-        run: echo "TODO: AGENTS.md에 test 커맨드가 정해지면 여기로 옮길 것"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test
+        run: python -m pytest
