@@ -4,8 +4,9 @@
 - 데이터: FNSPID (Financial News and Stock Price Integration Dataset), Hugging Face `Zihan1004/FNSPID`
 - 대상: `configs/universe.yaml`의 임시(TBD) 유니버스 9종목 (NVDA, AMD, TSM, MU, SNDK, MPWR, VICR, ADI, ON)
 - 방식: 원본 CSV를 내려받지 않고 Hugging Face에서 청크(20만 행) 단위로 스트리밍하며 `Stock_symbol`이 유니버스에 속하는 행만 필터링
-- 코드: `fnspid_news_pilot.py` (하드코딩 파일럿, 레포 구조 반영 전)
-- 결과물: `fnspid_nasdaq_filtered.csv`, `fnspid_all_filtered.csv` (로컬 보관, 커밋 안 함 — 라이선스 CC BY-NC 4.0, 레포 규칙상 원본 텍스트 데이터 커밋 금지)
+- 코드: `src/capstone/data/fnspid_news.py` (수집·요약), `scripts/fetch_fnspid_news.py` (CLI), 테스트 `tests/data/test_fnspid_news.py`
+- 재현: `python scripts/fetch_fnspid_news.py --file nasdaq` (아래 숫자는 같은 로직의 하드코딩 파일럿으로 낸 것)
+- 결과물: `data/raw/fnspid_news/{nasdaq,all}_filtered.csv` (gitignore, 로컬 보관, 커밋 안 함 — 라이선스 CC BY-NC 4.0, 레포 규칙상 원본 텍스트 데이터 커밋 금지)
 
 > 원래 담당은 Alpha Vantage였으나 뉴스 엔드포인트가 무료 키로 막혀 있어 FNSPID로 대체했다 (부록 A).
 
@@ -62,7 +63,7 @@ nasdaq 파일에서 `Article`이 비어 있는 비율은 29.7%로, 45,853 × 0.2
 - `Date`는 `2023-12-16 09:00:00 UTC` 형식으로 시간대(UTC)가 명시돼 있다.
 - 그러나 확인한 예시 시각이 `09:00:00`, `04:00:00`, `00:00:00`처럼 정각으로 떨어진다. **날짜만 정확하고 시각은 반올림/기본값일 가능성**이 있다 (**미확인**). `All_external` 쪽 예시(`06:30:54`)는 초 단위까지 있어 하위 소스별로 정밀도가 다를 수 있다.
 - 시각을 믿을 수 없다면 장 마감 전후를 구분할 수 없으므로, 보수적으로 **기사 날짜의 다음 거래일부터 반영**하는 처리를 검토해야 한다.
-- 확인 방법: 정각(`:00:00`) 비율을 하위 소스별로 세고, 몇 건은 URL을 열어 실제 발행 시각과 대조.
+- 확인 방법: CLI 요약에 출력되는 정각(`:00:00`) 시각 비율을 하위 소스별로 나눠 보고, 몇 건은 URL을 열어 실제 발행 시각과 대조.
 
 ## 6. 컬럼 품질 (nasdaq 파일, 필터링된 45,853건 기준)
 
