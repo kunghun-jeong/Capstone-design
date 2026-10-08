@@ -51,22 +51,20 @@ tests/                        # pytest, src/ 구조 미러링
 
 ## Setup
 
-<!-- 아직 requirements.txt/pyproject.toml이 없음 — 첫 데이터 파이프라인 PR에서 채울 것 -->
 ```
-# TBD — 패키지 매니저 확정 후 채울 것
 python -m venv .venv && source .venv/bin/activate
-# pip install -r requirements.txt   (아직 없음)
+pip install -r requirements.txt
 ```
+
+패키지 매니저는 아직 미확정이라 임시로 pip + `requirements.txt`(최소 목록)를 쓴다. 확정되면 갱신할 것.
+API 키는 레포 루트 `.env`에 둔다 (`.env.example` 참고, 커밋 금지).
 
 ## Build, run, and verify
 
-<!-- 빌드/실행 대상이 아직 없어 커맨드를 지어내지 않음. 첫 파이프라인/모델 코드가 생기는 PR에서
-반드시 채우고, 그 전까지는 "이 저장소는 아직 실행 가능한 산출물이 없다"는 게 사실이다. -->
-
 | Task | Command |
 |---|---|
-| Run the app | TBD — 아직 실행 가능한 파이프라인 없음 |
-| Run tests | TBD — 첫 테스트 추가 시 채울 것 |
+| Run the app | TBD — 모델/백테스트 파이프라인 없음. 뉴스 수집 CLI: `python scripts/fetch_alpaca_news.py --help` |
+| Run tests | `python -m pytest` |
 | Lint / format | TBD |
 | Type-check (if applicable) | TBD (사용한다면) |
 
