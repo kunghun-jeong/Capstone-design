@@ -1,0 +1,6 @@
+requests
+python-dotenv
+pyyaml
+pandas
+pytest
+feedparser

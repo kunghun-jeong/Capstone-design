@@ -1,0 +1,29 @@
+# 회사 공식 IR(투자자 관계) 보도자료 RSS — 2026-10-08 확인
+#
+# 여러 "일반 뉴스" 소스(Google News, SeekingAlpha, Nasdaq.com, Investing.com)를 검토했으나 전부
+# 기술적으로는 되더라도 "개인·비영리 열람만" 또는 "저장/복제 전면 금지" 약관에 걸려 제외했다.
+# 회사가 "자기 자신의" 보도자료를 투자자·언론에 배포하려고 공개한 피드는 이런 제약이 없다 —
+# 종목 태깅도 피드 하나 = 회사 하나라 저절로 해결된다.
+#
+# SOXX 상위 10종목 중 6개만 확인됐다:
+# - NVDA, QCOM, MU: investor 사이트가 Cloudflare 봇 차단("Just a moment...")으로 막힘 (SEC와 같은
+#   종류의 차단 — 우회하지 않기로 함, reports/ir_press_releases_report.md 참고)
+# - LRCX: 추정되는 IR 도메인(ir./investor./investors.lamresearch.com) 전부 연결 자체가 안 됨 (미확인)
+#
+# 두 가지 IR 플랫폼이 섞여 있다 (둘 다 feedparser로 동일하게 파싱됨, parse_entries가 흡수):
+# - "Q4형"(AMD, INTC, KLAC, MRVL): summary가 비어있고 날짜가 2자리 연도(RFC822, 예: "06 Oct 26")
+# - "그 외"(AVGO, AMAT): summary에 실제 요약 텍스트, author 필드 있음, 4자리 연도
+status: "6/10 확인, 4종목 보류"
+tickers:
+  - ticker: AMD
+    url: "https://ir.amd.com/news-events/press-releases/rss"
+  - ticker: INTC
+    url: "https://www.intc.com/news-events/press-releases/rss"
+  - ticker: AVGO
+    url: "https://investors.broadcom.com/rss/news-releases.xml"
+  - ticker: AMAT
+    url: "https://ir.appliedmaterials.com/rss/news-releases.xml"
+  - ticker: KLAC
+    url: "https://ir.kla.com/news-events/press-releases/rss"
+  - ticker: MRVL
+    url: "https://investor.marvell.com/news-events/press-releases/rss"
