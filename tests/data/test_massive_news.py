@@ -1,26 +1,37 @@
 import json
-from datetime import date
+import importlib.util
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 import requests
 
+from capstone.data import massive_news
 from capstone.data.massive_news import (
     API_KEY_ENV,
     MIN_REQUEST_INTERVAL,
     NEWS_URL,
-    MassiveAuthError,
     MassiveCredentialsError,
     MassiveNewsClient,
+    MassivePermissionError,
     MassivePaginationError,
     MassiveRequestError,
     MassiveResponseError,
     MassiveStorageError,
+    MassiveUnauthorizedError,
     _read_jsonl_ids,
     collect_symbol,
     load_api_key,
-    month_chunks,
     validate_next_url,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+CLI_SPEC = importlib.util.spec_from_file_location(
+    "fetch_massive_news", REPO_ROOT / "scripts" / "fetch_massive_news.py"
+)
+assert CLI_SPEC is not None and CLI_SPEC.loader is not None
+CLI_MODULE = importlib.util.module_from_spec(CLI_SPEC)
+CLI_SPEC.loader.exec_module(CLI_MODULE)
 
 
 class FakeResponse:
@@ -75,13 +86,128 @@ def make_client(responses, *, min_interval=MIN_REQUEST_INTERVAL, **kwargs):
 
 def test_missing_key_error_names_variable_only(monkeypatch):
     monkeypatch.delenv(API_KEY_ENV, raising=False)
+    monkeypatch.setattr(massive_news, "load_dotenv", lambda **_: None)
     with pytest.raises(MassiveCredentialsError, match=API_KEY_ENV):
         load_api_key()
 
 
+def test_cli_default_output_directory_is_ticker_data_root():
+    assert CLI_MODULE.DEFAULT_OUT_DIR == REPO_ROOT / "data" / "raw" / "massive_news_ticker"
+
+
+def test_cli_parses_dates_and_utc_z_datetimes():
+    assert CLI_MODULE.parse_datetime("2026-10-12") == datetime(2026, 10, 12, tzinfo=timezone.utc)
+    assert CLI_MODULE.parse_datetime("2026-10-12T09:15:30Z") == datetime(
+        2026, 10, 12, 9, 15, 30, tzinfo=timezone.utc
+    )
+
+
+def test_cli_rejects_naive_datetime():
+    with pytest.raises(CLI_MODULE.argparse.ArgumentTypeError, match="THH:MM:SSZ"):
+        CLI_MODULE.parse_datetime("2026-10-12T09:00:00")
+
+
+def test_cli_rejects_non_utc_datetime_offset():
+    with pytest.raises(CLI_MODULE.argparse.ArgumentTypeError, match="THH:MM:SSZ"):
+        CLI_MODULE.parse_datetime("2026-10-12T09:00:00+09:00")
+
+
+def test_cli_uses_default_start_when_argument_is_omitted(monkeypatch):
+    class FakeStats:
+        def as_dict(self):
+            return {"requests": 0}
+
+    class FakeClient:
+        stats = FakeStats()
+
+    collected = []
+    monkeypatch.setattr(
+        "sys.argv", ["fetch_massive_news.py", "--symbols", "NVDA", "--end", "2026-10-13"]
+    )
+    monkeypatch.setattr(CLI_MODULE, "load_api_key", lambda: "test-key")
+    monkeypatch.setattr(CLI_MODULE, "MassiveNewsClient", lambda api_key: FakeClient())
+    monkeypatch.setattr(CLI_MODULE, "collect_symbol", lambda *args: collected.append(args))
+    monkeypatch.setattr(CLI_MODULE, "log_run", lambda *args: None)
+
+    assert CLI_MODULE.main() == 0
+    assert collected[0][2] == datetime(2016, 6, 22, tzinfo=timezone.utc)
+
+
+def test_cli_uses_end_one_hour_before_current_utc_when_omitted(monkeypatch):
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 10, 12, 14, 30, tzinfo=timezone.utc)
+
+    class FakeStats:
+        def as_dict(self):
+            return {"requests": 0}
+
+    class FakeClient:
+        stats = FakeStats()
+
+    collected = []
+    monkeypatch.setattr(CLI_MODULE, "datetime", FixedDateTime)
+    monkeypatch.setattr("sys.argv", ["fetch_massive_news.py", "--symbols", "NVDA"])
+    monkeypatch.setattr(CLI_MODULE, "load_api_key", lambda: "test-key")
+    monkeypatch.setattr(CLI_MODULE, "MassiveNewsClient", lambda api_key: FakeClient())
+    monkeypatch.setattr(CLI_MODULE, "collect_symbol", lambda *args: collected.append(args))
+    monkeypatch.setattr(CLI_MODULE, "log_run", lambda *args: None)
+
+    assert CLI_MODULE.main() == 0
+    assert collected[0][3] == datetime(2026, 10, 12, 13, 30, tzinfo=timezone.utc)
+
+
+def test_cli_returns_failure_when_run_log_cannot_be_saved(monkeypatch, capsys):
+    class FakeStats:
+        def as_dict(self):
+            return {"requests": 0}
+
+    class FakeClient:
+        stats = FakeStats()
+
+    def fail_to_log(*args, **kwargs):
+        raise MassiveStorageError("run log is unavailable")
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "fetch_massive_news.py",
+            "--symbols",
+            "NVDA",
+            "--start",
+            "2024-01-01",
+            "--end",
+            "2024-01-02",
+        ],
+    )
+    monkeypatch.setattr(CLI_MODULE, "load_api_key", lambda: "test-key")
+    monkeypatch.setattr(CLI_MODULE, "MassiveNewsClient", lambda api_key: FakeClient())
+    monkeypatch.setattr(CLI_MODULE, "collect_symbol", lambda *args, **kwargs: 0)
+    monkeypatch.setattr(CLI_MODULE, "log_run", fail_to_log)
+
+    assert CLI_MODULE.main() == 1
+    assert "실행 로그 저장 오류" in capsys.readouterr().err
+
+
 def test_load_api_key_reads_environment(monkeypatch):
     monkeypatch.setenv(API_KEY_ENV, "fake-test-key")
+    monkeypatch.setattr(massive_news, "load_dotenv", lambda **_: None)
     assert load_api_key() == "fake-test-key"
+
+
+def test_load_api_key_loads_repository_dotenv_before_reading_environment(monkeypatch):
+    calls = []
+
+    def fake_load_dotenv(*, dotenv_path):
+        calls.append(dotenv_path)
+        monkeypatch.setenv(API_KEY_ENV, "fake-dotenv-key")
+
+    monkeypatch.delenv(API_KEY_ENV, raising=False)
+    monkeypatch.setattr(massive_news, "load_dotenv", fake_load_dotenv)
+
+    assert load_api_key() == "fake-dotenv-key"
+    assert calls == [REPO_ROOT / ".env"]
 
 
 def test_client_rejects_interval_faster_than_five_requests_per_minute():
@@ -104,6 +230,16 @@ def test_news_request_uses_bearer_auth_and_published_utc_range():
         "limit": 1000,
     }
     assert call["allow_redirects"] is False
+
+
+def test_news_request_normalizes_datetime_offsets_to_utc():
+    client, _ = make_client([FakeResponse({"results": []})])
+    start = datetime(2026, 10, 12, 9, 0, tzinfo=timezone(timedelta(hours=9)))
+    end = datetime(2026, 10, 12, 10, 30, tzinfo=timezone(timedelta(hours=9)))
+    list(client.iter_articles("NVDA", start, end))
+    params = client._session.calls[0][1]["params"]
+    assert params["published_utc.gte"] == "2026-10-12T00:00:00Z"
+    assert params["published_utc.lt"] == "2026-10-12T01:30:00Z"
 
 
 def test_pagination_follows_next_url_and_keeps_authorization_header():
@@ -167,7 +303,11 @@ def test_invalid_json_raises_response_error_without_retry():
 
 def test_auth_and_non_retryable_http_errors():
     client, _ = make_client([FakeResponse(status_code=401)])
-    with pytest.raises(MassiveAuthError):
+    with pytest.raises(MassiveUnauthorizedError):
+        client.iter_articles("NVDA", date(2024, 1, 1), date(2024, 1, 2)).__next__()
+
+    client, _ = make_client([FakeResponse(status_code=403)])
+    with pytest.raises(MassivePermissionError):
         client.iter_articles("NVDA", date(2024, 1, 1), date(2024, 1, 2)).__next__()
 
     client, _ = make_client([FakeResponse(status_code=404)])
@@ -206,31 +346,35 @@ def test_retry_limit_raises_request_error():
     assert client.stats.requests == 3
 
 
-def test_month_chunks_are_half_open_and_include_end_day():
-    assert month_chunks(date(2023, 12, 31), date(2024, 1, 1)) == [
-        ("2023-12", date(2023, 12, 31), date(2024, 1, 1)),
-        ("2024-01", date(2024, 1, 1), date(2024, 1, 2)),
-    ]
-
-
-def test_collect_saves_by_published_utc_year_and_deduplicates(tmp_path):
+def test_collect_requests_full_range_once_paginates_and_saves_by_utc_year(tmp_path):
+    next_url = f"{NEWS_URL}?cursor=year-boundary"
     client, _ = make_client(
         [
-            FakeResponse({"results": [article("dec", "2023-12-31T23:59:59Z")]}),
-            FakeResponse({"results": [article("jan"), article("jan")]}),
+            FakeResponse(
+                {"results": [article("dec", "2023-12-31T23:59:59Z")], "next_url": next_url}
+            ),
+            FakeResponse({"results": [article("jan", "2024-01-01T00:00:00Z"), article("jan")]})
         ]
     )
     assert collect_symbol(
         client,
         "nvda",
         date(2023, 12, 31),
-        date(2024, 1, 1),
+        date(2024, 1, 2),
         tmp_path,
         progress=lambda _: None,
     ) == 2
     ticker_dir = tmp_path / "NVDA"
+    assert len(client._session.calls) == 2
+    first_url, first_call = client._session.calls[0]
+    assert first_url == NEWS_URL
+    assert first_call["params"]["published_utc.gte"] == "2023-12-31T00:00:00Z"
+    assert first_call["params"]["published_utc.lt"] == "2024-01-02T00:00:00Z"
+    assert client._session.calls[1][0] == next_url
     assert [json.loads(line)["id"] for line in (ticker_dir / "2023.jsonl").read_text().splitlines()] == ["dec"]
     assert [json.loads(line)["id"] for line in (ticker_dir / "2024.jsonl").read_text().splitlines()] == ["jan"]
+    state = json.loads((ticker_dir / "_state.json").read_text(encoding="utf-8"))
+    assert state == {"last_successful_end_exclusive": "2024-01-02T00:00:00Z"}
 
 
 def test_collect_deduplicates_ids_already_on_disk(tmp_path):
@@ -239,23 +383,123 @@ def test_collect_deduplicates_ids_already_on_disk(tmp_path):
     (ticker_dir / "2024.jsonl").write_text(json.dumps(article("existing")) + "\n", encoding="utf-8")
     client, _ = make_client([FakeResponse({"results": [article("existing"), article("new")]})])
     saved = collect_symbol(
-        client, "NVDA", date(2024, 1, 1), date(2024, 1, 1), tmp_path, progress=lambda _: None
+        client, "NVDA", date(2024, 1, 1), date(2024, 1, 2), tmp_path, progress=lambda _: None
     )
     assert saved == 1
     rows = [json.loads(line)["id"] for line in (ticker_dir / "2024.jsonl").read_text().splitlines()]
     assert rows == ["existing", "new"]
 
 
-def test_completed_months_are_skipped_on_resume(tmp_path):
+def test_completed_range_is_skipped_when_end_has_not_advanced(tmp_path):
     client, _ = make_client([FakeResponse({"results": []})])
     assert collect_symbol(
-        client, "NVDA", date(2024, 1, 1), date(2024, 1, 1), tmp_path, progress=lambda _: None
+        client, "NVDA", date(2024, 1, 1), date(2024, 1, 2), tmp_path, progress=lambda _: None
     ) == 0
     resumed, _ = make_client([])
     assert collect_symbol(
-        resumed, "NVDA", date(2024, 1, 1), date(2024, 1, 1), tmp_path, progress=lambda _: None
+        resumed, "NVDA", date(2024, 1, 1), date(2024, 1, 2), tmp_path, progress=lambda _: None
     ) == 0
-    assert resumed.stats.requests == 0 and resumed.stats.months_skipped == 1
+    assert resumed.stats.requests == 0 and resumed.stats.tickers_skipped == 1
+    state = json.loads((tmp_path / "NVDA" / "_state.json").read_text(encoding="utf-8"))
+    assert state == {"last_successful_end_exclusive": "2024-01-02T00:00:00Z"}
+
+
+def test_resume_starts_at_last_successful_end_and_saves_new_watermark(tmp_path):
+    first, _ = make_client([FakeResponse({"results": [article("first", "2024-01-02T12:00:00Z")]})])
+    assert collect_symbol(
+        first, "NVDA", date(2024, 1, 1), date(2024, 1, 3), tmp_path, progress=lambda _: None
+    ) == 1
+
+    resumed, _ = make_client([FakeResponse({"results": [article("second", "2024-01-03T12:00:00Z")]})])
+    assert collect_symbol(
+        resumed, "NVDA", date(2024, 1, 1), date(2024, 1, 4), tmp_path, progress=lambda _: None
+    ) == 1
+    params = resumed._session.calls[0][1]["params"]
+    assert params["published_utc.gte"] == "2024-01-03T00:00:00Z"
+    assert params["published_utc.lt"] == "2024-01-04T00:00:00Z"
+    state = json.loads((tmp_path / "NVDA" / "_state.json").read_text(encoding="utf-8"))
+    assert state == {"last_successful_end_exclusive": "2024-01-04T00:00:00Z"}
+    rows = [
+        json.loads(line)["id"]
+        for line in (tmp_path / "NVDA" / "2024.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    assert rows == ["first", "second"]
+
+
+def test_legacy_completed_range_is_used_as_resume_watermark(tmp_path):
+    ticker_dir = tmp_path / "NVDA"
+    ticker_dir.mkdir()
+    (ticker_dir / "_state.json").write_text(
+        json.dumps(
+            {
+                "completed_tickers": {
+                    "2024-01-01..2024-01-03": {
+                        "start": "2024-01-01",
+                        "end_exclusive": "2024-01-03",
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    client, _ = make_client([FakeResponse({"results": []})])
+    assert collect_symbol(
+        client, "NVDA", date(2024, 1, 1), date(2024, 1, 4), tmp_path, progress=lambda _: None
+    ) == 0
+    assert client._session.calls[0][1]["params"]["published_utc.gte"] == "2024-01-03T00:00:00Z"
+    state = json.loads((ticker_dir / "_state.json").read_text(encoding="utf-8"))
+    assert state == {"last_successful_end_exclusive": "2024-01-04T00:00:00Z"}
+
+
+def test_failed_later_page_leaves_no_range_checkpoint_and_retry_deduplicates(tmp_path):
+    next_url = f"{NEWS_URL}?cursor=second-page"
+    first, _ = make_client(
+        [
+            FakeResponse({"results": [article("saved-before-failure")], "next_url": next_url}),
+            requests.exceptions.ConnectionError("offline"),
+        ],
+        max_retries=0,
+    )
+    with pytest.raises(MassiveRequestError):
+        collect_symbol(
+            first, "NVDA", date(2024, 1, 1), date(2025, 1, 1), tmp_path, progress=lambda _: None
+        )
+
+    ticker_dir = tmp_path / "NVDA"
+    assert not (ticker_dir / "_state.json").exists()
+    assert [
+        json.loads(line)["id"] for line in (ticker_dir / "2024.jsonl").read_text(encoding="utf-8").splitlines()
+    ] == ["saved-before-failure"]
+
+    resumed, _ = make_client([FakeResponse({"results": [article("saved-before-failure"), article("new")]})])
+    assert collect_symbol(
+        resumed, "NVDA", date(2024, 1, 1), date(2025, 1, 1), tmp_path, progress=lambda _: None
+    ) == 1
+    assert [
+        json.loads(line)["id"] for line in (ticker_dir / "2024.jsonl").read_text(encoding="utf-8").splitlines()
+    ] == ["saved-before-failure", "new"]
+
+
+def test_failed_incremental_request_keeps_previous_watermark(tmp_path):
+    ticker_dir = tmp_path / "NVDA"
+    ticker_dir.mkdir()
+    state_path = ticker_dir / "_state.json"
+    state_path.write_text(
+        json.dumps({"last_successful_end_exclusive": "2024-01-03T00:00:00Z"}), encoding="utf-8"
+    )
+    client, _ = make_client(
+        [
+            FakeResponse({"results": [article("written-before-failure", "2024-01-03T12:00:00Z")], "next_url": f"{NEWS_URL}?cursor=next"}),
+            requests.exceptions.ConnectionError("offline"),
+        ],
+        max_retries=0,
+    )
+    with pytest.raises(MassiveRequestError):
+        collect_symbol(
+            client, "NVDA", date(2024, 1, 1), date(2024, 1, 5), tmp_path, progress=lambda _: None
+        )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["last_successful_end_exclusive"] == "2024-01-03T00:00:00Z"
 
 
 def test_jsonl_reader_rejects_corrupt_records(tmp_path):
