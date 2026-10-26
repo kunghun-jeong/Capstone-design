@@ -135,10 +135,10 @@ def test_get_page_does_not_retry_bad_request():
 
 def test_get_page_gives_up_after_max_retries():
     timeout = FakeResponse({"error": "Timeout"}, status_code=422)
-    client, _ = make_client([timeout] * 7)
+    client, _ = make_client([timeout] * 9)
     with pytest.raises(RedditRequestError, match="재시도 한도"):
         client.get_page("comments", {})
-    assert client.stats.requests == 7
+    assert client.stats.requests == 9
 
 
 def test_iter_items_requests_next_page_from_last_second_inclusive():

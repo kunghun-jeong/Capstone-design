@@ -38,7 +38,7 @@ KINDS = ("posts", "comments")
 
 PAGE_LIMIT = 100                # API 최대값
 MIN_REQUEST_INTERVAL = 0.5      # 요청 간 최소 간격(초)
-MAX_RETRIES = 6
+MAX_RETRIES = 8                 # 백오프 2→120초, 총 약 6분 — 짧은 네트워크 끊김을 버티도록
 MAX_PAGES_PER_UNIT = 100_000    # 한 서브레딧·종류·월 단위의 안전 한도 (WSB 댓글 한 달 ≈ 1만 페이지)
 RUNS_LOG = "_runs.jsonl"
 
