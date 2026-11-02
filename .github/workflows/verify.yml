@@ -21,7 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: (placeholder) lint
-        run: echo "TODO: AGENTS.md에 lint 커맨드가 정해지면 여기로 옮길 것"
+        run: 'echo "TODO: AGENTS.md에 lint 커맨드가 정해지면 여기로 옮길 것"'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
