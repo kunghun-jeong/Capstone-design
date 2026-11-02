@@ -4,3 +4,6 @@ pyyaml
 pandas
 pytest
 feedparser
+pyarrow
+pandas_market_calendars
+beautifulsoup4
