@@ -1,0 +1,48 @@
+# 모델 B용 뉴스 전처리 설정 (docs/plans/news_preprocessing_plan.md 참고)
+
+# 확정된 8개만. TODO: 나머지 2종목 확정 시 추가(ADI 포함 여부, GOOGL/GOOG 선택 미정).
+# 'ON' 같은 YAML 불리언 티커는 따옴표 필수. SNDK·전력주(MPWR, VICR, ON)는 제외됨.
+tickers:
+  - AMZN
+  - GOOGL
+  - META
+  - MSFT
+  - NVDA
+  - AMD
+  - TSM
+  - MU
+
+# 학습 구간(귀속 거래일 기준, 양끝 포함). warmup_start부터는 베이스라인 계산용으로만 쓴다.
+period:
+  warmup_start: 2026-01-01
+  start: 2026-04-01
+  end: 2026-10-31
+
+# 귀속 컷오프: "close" = 해당 거래일의 실제 장 마감(조기 폐장 반영), 또는 "HH:MM"(America/New_York 고정).
+cutoff: close
+
+# "평소 대비 편차" 베이스라인: t 이전 window 거래일의 중앙값/MAD (t 당일 제외)
+baseline:
+  window: 60
+  min_periods: 40
+  scale_floor: 1.0   # MAD가 0인 희소 종목에서 z가 폭발하지 않도록 하는 분모 하한
+
+# 광역 기사 기준: 태그 수가 이 값을 넘으면 is_broad
+broad_tag_threshold: 10
+
+# is_primary 판정용 별칭(제목에 티커 또는 별칭이 단어로 등장하면 primary). 대소문자 무시.
+aliases:
+  AMZN: [Amazon, AWS]
+  GOOGL: [Google, Alphabet, Gemini, DeepMind]
+  META: [Meta, Facebook, Instagram, WhatsApp]
+  MSFT: [Microsoft, Azure, Copilot]
+  NVDA: [Nvidia]
+  AMD: [AMD, Advanced Micro Devices]
+  TSM: [TSMC, Taiwan Semiconductor]
+  MU: [Micron]
+
+paths:
+  alpaca_raw: data/raw/alpaca_news
+  massive_raw: data/raw/massive_news_ticker
+  interim: data/interim/news
+  processed: data/processed/news
