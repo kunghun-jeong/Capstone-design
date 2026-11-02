@@ -1,0 +1,23 @@
+# Reddit 수집 대상 서브레딧 — 임시(TBD)
+#
+# 2026-10 Arctic Shift 실측 기준 하루 댓글 수(대략): wallstreetbets 2.8만, stocks 2.9천, investing 1.2천,
+# StockMarket 700, AMD_Stock 300, NVDA_Stock 150, Semiconductors 80.
+# wallstreetbets 댓글이 전체 양의 약 84%라 따로 실행하는 것을 권장한다
+# (예: --subreddits wallstreetbets --kinds comments --workers 2).
+# 종목 전용 서브레딧은 NVDA_Stock·AMD_Stock 외에는 없거나 매우 작다(TSMC 3.6천 명 등).
+status: TBD
+subreddits:
+  - name: stocks
+    kinds: [posts, comments]
+  - name: investing
+    kinds: [posts, comments]
+  - name: StockMarket
+    kinds: [posts, comments]
+  - name: Semiconductors
+    kinds: [posts, comments]
+  - name: NVDA_Stock
+    kinds: [posts, comments]
+  - name: AMD_Stock
+    kinds: [posts, comments]
+  - name: wallstreetbets
+    kinds: [posts, comments]
