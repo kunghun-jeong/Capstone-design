@@ -1,0 +1,78 @@
+# 모델 B용 Reddit 전처리 설정 (docs/plans/reddit_preprocessing_plan.md 참고)
+
+# 유니버스 10종목. 'ON' 같은 YAML 불리언 티커는 따옴표 필수. SNDK·전력주·ADI는 제외(other_tickers로만 센다).
+tickers:
+  - AMZN
+  - GOOGL
+  - META
+  - MSFT
+  - NVDA
+  - AMD
+  - TSM
+  - MU
+  - AVGO
+  - MRVL
+
+# 티커 매칭 정규식(대문자, 기본은 티커 그대로). GOOG·GOOGL → GOOGL, TSMC → TSM으로 합친다.
+ticker_patterns:
+  GOOGL: "GOOGL?"
+  TSM: "TSMC?"
+
+# 회사명(대소문자 무시). 티커 없이 이것만 나오면 is_name_only — 오탐이 많아 집계에서 기본 제외.
+aliases:
+  AMZN: [Amazon, AWS]
+  GOOGL: [Google, Alphabet, Gemini, DeepMind]
+  META: [Meta, Facebook, Instagram, WhatsApp]
+  MSFT: [Microsoft, Azure, Copilot]
+  NVDA: [Nvidia]
+  AMD: [AMD, Advanced Micro Devices]   # 소문자 "amd"는 티커가 아니라 회사명으로 본다
+  TSM: [Taiwan Semiconductor]
+  MU: [Micron]
+  AVGO: [Broadcom]
+  MRVL: [Marvell]
+
+# 유니버스 밖이지만 같이 언급되는 종목 — n_other_tickers / is_broad 판정에만 쓴다.
+other_tickers: [SNDK, INTC, QCOM, ARM, ASML, SMCI, AAPL, TSLA, PLTR, ORCL, SPY, QQQ, SOXX, SMH, SOXL]
+
+# 귀속 거래일 기준(양끝 포함). baseline_start부터는 베이스라인 계산에만 쓰고 산출물은 start~end만 낸다.
+# 2026-04-24는 수집 시작 경계(4/23 20:00 ET)라 불완전한 날이어서 4/27부터.
+# TODO: data/raw/reddit_backfill(2/1~4/23) 수집이 끝나면 baseline_start: 2026-02-02, window: 60, min_periods: 40으로 바꿔 뉴스와 맞춘다.
+period:
+  baseline_start: 2026-04-27
+  start: 2026-05-01
+  end: 2026-09-30
+
+# 귀속 컷오프: 뉴스와 같다("close" = 해당 거래일 실제 장 마감).
+cutoff: close
+
+# "평소 대비 편차": t 이전 window 거래일의 중앙값/MAD (t 당일 제외)
+baseline:
+  window: 20
+  min_periods: 20
+  scale_floor: 1.0         # 건수 z의 분모 하한(건)
+  ratio_scale_floor: 1.0   # 비율 z의 분모 하한(만 건당 언급 수)
+
+# 유니버스 + other_tickers 종목 수가 이 값 이상이면 is_broad(관심 종목 나열)
+broad_tag_threshold: 5
+
+# 감성 입력으로 쓰기엔 짧은 글 기준(글자 수). 지우지 않고 is_short 플래그만 — 언급량에는 포함.
+min_chars: 20
+
+# 제거 표시(removed_by_category) 게시글을 2단계에서 뺄지. 기본은 포함(리포트 7절, 팀 결정 대기).
+drop_removed_posts: false
+
+# 회사명만 있는 글을 집계에 넣을지
+include_name_only: false
+
+# 작성자 이름으로 제거하는 봇 계정(대소문자 무시)
+# verified-trader: WSB "BanBet Created" 표를 다는 봇(2026-06 WSB 언급 댓글 상위 작성자에서 확인)
+bots: [AutoModerator, VisualMod, verified-trader, RemindMeBot, sneakpeekbot, WSBVoteBot, QualityVote, stonkbot]
+
+# author → sha256(salt + author) 앞 16자. 비밀값이 아니라 원본 아이디를 산출물에 남기지 않기 위한 용도.
+author_salt: skku-capstone-reddit
+
+paths:
+  # TODO: 추가 수집(2/1~4/23)이 끝나면 data/raw/reddit_backfill을 추가한다(수집 중인 파일을 읽지 않도록 지금은 제외).
+  raw: [data/raw/reddit]
+  interim: data/interim/reddit
+  processed: data/processed/reddit
