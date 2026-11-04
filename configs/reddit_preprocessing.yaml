@@ -35,10 +35,10 @@ aliases:
 other_tickers: [SNDK, INTC, QCOM, ARM, ASML, SMCI, AAPL, TSLA, PLTR, ORCL, SPY, QQQ, SOXX, SMH, SOXL]
 
 # 귀속 거래일 기준(양끝 포함). baseline_start부터는 베이스라인 계산에만 쓰고 산출물은 start~end만 낸다.
-# 2026-04-24는 수집 시작 경계(4/23 20:00 ET)라 불완전한 날이어서 4/27부터.
-# TODO: data/raw/reddit_backfill(2/1~4/23) 수집이 끝나면 baseline_start: 2026-02-02, window: 60, min_periods: 40으로 바꿔 뉴스와 맞춘다.
+# 추가 수집분(data/raw/reddit_backfill)은 2026-02-01 00:00 UTC(1/31 19:00 ET)부터라 2/2 거래일은
+# 1/30 장 마감 후 글이 빠진 불완전한 날이다 → 2/3부터. 4/24는 기존 수집분과 이어져 온전하다.
 period:
-  baseline_start: 2026-04-27
+  baseline_start: 2026-02-03
   start: 2026-05-01
   end: 2026-09-30
 
@@ -47,8 +47,8 @@ cutoff: close
 
 # "평소 대비 편차": t 이전 window 거래일의 중앙값/MAD (t 당일 제외)
 baseline:
-  window: 20
-  min_periods: 20
+  window: 60               # 뉴스와 같다
+  min_periods: 40
   scale_floor: 1.0         # 건수 z의 분모 하한(건)
   ratio_scale_floor: 1.0   # 비율 z의 분모 하한(만 건당 언급 수)
 
@@ -72,7 +72,7 @@ bots: [AutoModerator, VisualMod, verified-trader, RemindMeBot, sneakpeekbot, WSB
 author_salt: skku-capstone-reddit
 
 paths:
-  # TODO: 추가 수집(2/1~4/23)이 끝나면 data/raw/reddit_backfill을 추가한다(수집 중인 파일을 읽지 않도록 지금은 제외).
-  raw: [data/raw/reddit]
+  # reddit_backfill: 2/1~4/23 추가 수집분(2026-11-04 완료). 두 폴더의 글 ID가 겹치면 1단계에서 오류를 낸다.
+  raw: [data/raw/reddit, data/raw/reddit_backfill]
   interim: data/interim/reddit
   processed: data/processed/reddit
