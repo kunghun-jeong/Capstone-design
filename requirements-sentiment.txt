@@ -1,0 +1,4 @@
+# 감성 점수(scripts/score_reddit_sentiment.py의 score 단계)에만 필요. CI·전처리에는 필요 없다.
+-r requirements.txt
+torch==2.15.0
+transformers==5.22.1
