@@ -171,7 +171,7 @@ def test_config_rejects_boolean_ticker(tmp_path):
 
 def test_repo_config_loads():
     cfg = load_config(__import__("pathlib").Path(__file__).resolve().parents[3] / "configs" / "news_preprocessing.yaml")
-    assert "SNDK" not in cfg.tickers and cfg.start == date(2026, 4, 1)
+    assert "SNDK" not in cfg.tickers and len(cfg.tickers) == 10 and cfg.start == date(2026, 5, 1) and cfg.end == date(2026, 9, 30)
 
 
 def test_build_tables_end_to_end():
