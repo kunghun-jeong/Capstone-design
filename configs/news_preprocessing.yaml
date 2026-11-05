@@ -1,7 +1,8 @@
 # 모델 B용 뉴스 전처리 설정 (docs/plans/news_preprocessing_plan.md 참고)
 
-# 확정된 8개만. TODO: 나머지 2종목 확정 시 추가(ADI 포함 여부, GOOGL/GOOG 선택 미정).
-# 'ON' 같은 YAML 불리언 티커는 따옴표 필수. SNDK·전력주(MPWR, VICR, ON)는 제외됨.
+# 팀 확정 유니버스 10개 (Reddit 리포트의 논의안 11종목에서 SNDK 제외). 전력주·ADI도 제외.
+# 'ON' 같은 YAML 불리언 티커는 따옴표 필수.
+# 구글은 GOOGL로 수집·집계한다(Alpaca/Massive 태그 기준). GOOG 태그 처리는 아직 미정.
 tickers:
   - AMZN
   - GOOGL
@@ -11,12 +12,14 @@ tickers:
   - AMD
   - TSM
   - MU
+  - AVGO
+  - MRVL
 
 # 학습 구간(귀속 거래일 기준, 양끝 포함). warmup_start부터는 베이스라인 계산용으로만 쓴다.
 period:
   warmup_start: 2026-01-01
-  start: 2026-04-01
-  end: 2026-10-31
+  start: 2026-05-01
+  end: 2026-09-30
 
 # 귀속 컷오프: "close" = 해당 거래일의 실제 장 마감(조기 폐장 반영), 또는 "HH:MM"(America/New_York 고정).
 cutoff: close
@@ -40,6 +43,8 @@ aliases:
   AMD: [AMD, Advanced Micro Devices]
   TSM: [TSMC, Taiwan Semiconductor]
   MU: [Micron]
+  AVGO: [Broadcom]
+  MRVL: [Marvell]
 
 paths:
   alpaca_raw: data/raw/alpaca_news
