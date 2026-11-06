@@ -4,9 +4,8 @@
 
 - **`AGENTS.md`**가 이 레포에서 에이전트가 일하는 방식의 단일 기준 문서다. `CLAUDE.md`는 그걸 가리키기만
   하는 짧은 포인터라, 규칙이 두 곳에 따로 존재하면서 서서히 어긋나는 일이 없다.
-- **검증:** 아직 빌드/테스트 대상이 없어 `AGENTS.md`의 커맨드 표가 전부 TBD다. `.github/workflows/verify.yml`도
-  같은 이유로 아직 빈 placeholder다 — 첫 데이터 파이프라인/모델 코드가 들어가는 PR에서 둘 다 실제
-  커맨드로 채워야 한다.
+- **검증:** `python -m pytest`가 `AGENTS.md`의 커맨드 표와 `.github/workflows/verify.yml`에 같이 들어가 있고,
+  CI가 PR과 `main` push마다 돌린다. lint/type-check는 아직 TBD(CI의 lint 스텝은 placeholder)다.
 - **Danger zone:** force-push, 보호 브랜치(`main`) 직접 push, 시크릿/API 키 관련 작업, 대용량 원본
   텍스트 데이터셋 직접 커밋 — 이런 것들은 되돌리기 어렵거나 이 레포 밖(계정, 외부 데이터 라이선스)에
   영향을 주기 때문에 자율 세션에서도 사람 확인을 거친다.
@@ -27,17 +26,17 @@
   git 기본값인 `master`) 때문에 `master`로 생성됐었다. 로컬 브랜치를 `main`으로 rename하고, 같은 문제가
   다음 레포에서도 반복되지 않도록 `git config --global init.defaultBranch main`으로 계정 설정 자체를
   고쳤다.
-- **CI(`verify.yml`)는 빈 스텁으로 먼저 넣어뒀다.** 실제 lint/test 커맨드가 없어 지금은 checkout만 하고
-  아무것도 검증하지 않지만, 팀원이 파이프라인 코드를 추가하기 시작할 때 "커맨드만 채우면 되는" 자리를
-  미리 만들어 둔 것.
+- **CI(`verify.yml`)는 빈 스텁으로 먼저 넣어뒀고, 지금은 pytest가 채워져 있다.** 처음에는 YAML 문법 오류로
+  한 번도 실행되지 못했다가 PR #6에서 고쳐졌다. 그 사이 "CI가 있다"는 사실만 믿고 실제로는 아무것도 검증하지
+  못한 기간이 있었으니, 워크플로우를 고칠 때는 Actions 탭에서 실제로 실행되는지까지 확인할 것.
 
 ## Self-check
 
 가끔, 특히 새 팀원이 합류하기 전에 한 번씩 훑어볼 것:
 
 - [ ] AGENTS.md가 여전히 실제와 맞는가, 프로젝트가 거기서 적힌 것과 달라지지 않았는가?
-- [ ] AGENTS.md의 build/test/verify 커맨드와 `verify.yml`이 실제로 동작하는가? (지금은 둘 다 TBD/스텁 —
-      채워졌는지부터 확인)
+- [ ] AGENTS.md의 build/test/verify 커맨드와 `verify.yml`이 같은 커맨드를 말하고 실제로 통과하는가?
+      (지금 pytest는 채워져 있고 lint만 TBD)
 - [ ] Danger zone 목록이 여전히 적당한 길이인가 — 너무 길어 아무도 안 읽는 상태는 아닌가, 최근에
       위험해진 게 빠져 있진 않은가?
 - [ ] 새로 합류한 사람(팀원이든 에이전트든)이 진행 중인 작업의 맥락을 PR/커밋 히스토리만으로 파악할 수
