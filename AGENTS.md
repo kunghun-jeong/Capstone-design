@@ -17,7 +17,7 @@
 ```
 
 - **모델 A (정형 데이터)**: 공개 사전학습 시계열 모델 **Chronos-2**(가격·거래량 + 매크로를 외부 변수로 입력).
-  모델 A 담당 팀원이 운영하고 이 레포에는 코드가 없다. 출력은 CSV(`date, ticker, target_date, close, real_ret, pred_ret,
+  코드는 `notebooks/modelA_predict.ipynb`(Colab 노트북)이고 데이터는 레포에 없다. 출력은 CSV(`date, ticker, target_date, close, real_ret, pred_ret,
   pred_q10, pred_q90, residual`)로 받는다. `date`가 예측을 만든 시점 t, `target_date`가 t+3 거래일이다.
 - **모델 B (텍스트 데이터)**: 뉴스·Reddit의 종목별 **언급량과 감성의 "평소 대비 편차"** 및 둘의 곱을 입력으로
   ε를 예측한다. 뉴스:Reddit은 50:50이되 글 하나당 가중치는 글 수에 반비례(설계 합의, 아직 미구현).
@@ -43,7 +43,7 @@ src/capstone/
     news_preprocessing/      #   뉴스: 정규화, 거래일 귀속, 중복 제거, 노이즈 표시, FinBERT 감성, 종목·일 집계
     reddit_preprocessing/    #   Reddit: 같은 방식의 전처리
   features/                  # (Reddit 감성 코드가 들어올 자리 — PR #9는 아직 main 미반영)
-  models/model_a/            # 비어 있음 (모델 A는 레포 밖 담당자가 운영)
+  models/model_a/            # 비어 있음 (모델 A 코드는 notebooks/modelA_predict.ipynb)
   models/model_b/            # 비어 있음 (모델 B 학습 코드 예정)
   backtest/                  # 비어 있음
   eval/                      # 비어 있음

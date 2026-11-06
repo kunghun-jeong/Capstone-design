@@ -16,7 +16,7 @@ AI 섹터 종목의 n 거래일 뒤 주가 흐름을 예측할 수 있다. 현�
 ```
 
 - **모델 A — 정형 데이터:** 공개 사전학습 시계열 모델 **Chronos-2**에 가격·거래량을, 매크로는 외부 변수(공변량)로
-  넣는다. 모델 A 담당 팀원이 운영하며 레포에는 코드가 없다. 출력은 `date, ticker, target_date, close, real_ret, pred_ret, pred_q10,
+  넣는다. 코드는 `notebooks/modelA_predict.ipynb`(Colab 노트북)이고 데이터는 레포에 올리지 않는다. 출력은 `date, ticker, target_date, close, real_ret, pred_ret, pred_q10,
   pred_q90, residual` 형태의 CSV다.
 - **모델 B — 텍스트 데이터:** 뉴스와 Reddit에서 종목별 **언급량(강도)과 감성(방향)의 "평소 대비 편차"** 및 둘의
   곱을 만들어 ε를 예측한다. 뉴스와 Reddit은 50:50으로 반영하되, 글 수가 훨씬 많은 Reddit의 글 하나당
@@ -35,7 +35,7 @@ SNDK와 전력주(MPWR, VICR, ON 등)는 제외했다.
 | 뉴스 | Alpaca News(Benzinga), Massive. FNSPID·회사 IR RSS 수집기도 있으나 이번 학습 구간에는 쓰지 않는다 |
 | 커뮤니티 | Reddit — Arctic Shift API(키 불필요), 서브레딧은 `configs/reddit_subreddits.yaml` |
 | 감성 점수 | FinBERT(`ProsusAI/finbert`), 글 점수 = P(긍정) − P(부정). SocBERT는 아직 적용하지 않았다 |
-| 주가·매크로 | 모델 A 담당이 관리. 레포에는 없음 |
+| 주가·매크로 | 모델 A 노트북이 실행할 때 yfinance(주가·ETF)와 미국 재무부(금리)에서 받는다. 레포에는 없음 |
 
 소스별 수집 결과와 한계는 `reports/`, 전처리 결정과 근거는 `docs/plans/`에 있다.
 
