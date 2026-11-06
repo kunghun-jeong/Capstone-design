@@ -43,7 +43,7 @@ src/capstone/
     news_preprocessing/      #   뉴스: 정규화, 거래일 귀속, 중복 제거, 노이즈 표시, FinBERT 감성, 종목·일 집계
     reddit_preprocessing/    #   Reddit: 같은 방식의 전처리
   features/                  # (Reddit 감성 코드가 들어올 자리 — PR #9는 아직 main 미반영)
-  models/model_a/            # 비어 있음 (모델 A 코드는 notebooks/modelA_predict.ipynb)
+  models/model_a/            # forecaster.html: 모델 A 예측 CSV를 채점·시각화하는 데모 페이지 (모델 코드는 notebooks/modelA_predict.ipynb)
   models/model_b/            # 비어 있음 (모델 B 학습 코드 예정)
   backtest/                  # 비어 있음
   eval/                      # 비어 있음
@@ -52,7 +52,7 @@ scripts/                      # CLI 진입점 (fetch_*, preprocess_*, score_news
 tests/                        # pytest, src/ 구조 미러링
 ```
 
-코드가 있는 곳은 `data/` 아래뿐이고 나머지는 빈 스캐폴드(`__init__.py`/`.gitkeep`)다. 새 코드를 넣을 때 위 목록과
+코드가 있는 곳은 `data/` 아래와 모델 A(`notebooks/modelA_predict.ipynb`, `models/model_a/forecaster.html`)뿐이고 나머지는 빈 스캐폴드(`__init__.py`/`.gitkeep`)다. 새 코드를 넣을 때 위 목록과
 실제가 어긋나면 이 섹션도 같이 고칠 것.
 
 ## Setup
