@@ -42,13 +42,14 @@ src/capstone/
   data/                      # 수집기(alpaca/massive/fnspid/ir/reddit)와 전처리
     news_preprocessing/      #   뉴스: 정규화, 거래일 귀속, 중복 제거, 노이즈 표시, FinBERT 감성, 종목·일 집계
     reddit_preprocessing/    #   Reddit: 같은 방식의 전처리
-  features/                  # (Reddit 감성 코드가 들어올 자리 — PR #9는 아직 main 미반영)
+  features/
+    sentiment/               #   Reddit FinBERT 감성: 글 단위 점수, 종목·일 집계(z, 언급량×감성)
   models/model_a/            # 비어 있음 (모델 A는 레포 밖 담당자가 운영)
   models/model_b/            # 비어 있음 (모델 B 학습 코드 예정)
   backtest/                  # 비어 있음
   eval/                      # 비어 있음
 notebooks/                    # 탐색/실험용 노트북
-scripts/                      # CLI 진입점 (fetch_*, preprocess_*, score_news_sentiment)
+scripts/                      # CLI 진입점 (fetch_*, preprocess_*, score_news_sentiment, score_reddit_sentiment)
 tests/                        # pytest, src/ 구조 미러링
 ```
 
@@ -74,7 +75,7 @@ API 키는 레포 루트 `.env`에 둔다 (커밋 금지): `APCA_API_KEY_ID`, `A
 |---|---|
 | 수집 | `python scripts/fetch_alpaca_news.py --help`, `fetch_massive_news.py`, `fetch_reddit.py` (모두 `--symbols`로 티커 지정 가능) |
 | 뉴스 전처리 | `python scripts/preprocess_news.py` → `python scripts/score_news_sentiment.py` |
-| Reddit 전처리 | `python scripts/preprocess_reddit.py` |
+| Reddit 전처리 | `python scripts/preprocess_reddit.py` → `python scripts/score_reddit_sentiment.py` |
 | Run tests | `python -m pytest` |
 | Lint / format | TBD |
 | Type-check (if applicable) | TBD (사용한다면) |

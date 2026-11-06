@@ -44,8 +44,11 @@ def build_stage1(files: list[tuple[Path, str, str]], cfg: Config, workers: int =
     return rows, activity
 
 
-def build_stage2(rows: pd.DataFrame, activity: pd.DataFrame, cfg: Config) -> tuple[dict[str, pd.DataFrame], dict]:
-    """디스크 접근 없음. 반환: (테이블들, 단계별 건수)."""
+def build_article_ticker(rows: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame, dict]:
+    """1단계 행 → 노이즈 제거·복붙 합치기·종목별 펼치기. baseline_start~end 전체(자르기 전)와 단계별 건수.
+
+    감성 피처(features/sentiment)도 베이스라인 구간 글이 필요해서 이 함수를 그대로 쓴다.
+    """
     lo, hi = pd.Timestamp(cfg.baseline_start), pd.Timestamp(cfg.end)
     rows = rows[rows["attributed_day"].between(lo, hi)].reset_index(drop=True)
     stats: dict = {"stage1_rows_in_range": len(rows)}
@@ -60,6 +63,13 @@ def build_stage2(rows: pd.DataFrame, activity: pd.DataFrame, cfg: Config) -> tup
 
     matcher = TickerMatcher(cfg.tickers, cfg.ticker_patterns, cfg.aliases, cfg.other_tickers)
     article_ticker = explode_by_ticker(articles, cfg, lambda title: matcher.match(title)[0])
+    return article_ticker, stats
+
+
+def build_stage2(rows: pd.DataFrame, activity: pd.DataFrame, cfg: Config) -> tuple[dict[str, pd.DataFrame], dict]:
+    """디스크 접근 없음. 반환: (테이블들, 단계별 건수)."""
+    article_ticker, stats = build_article_ticker(rows, cfg)
+    hi = pd.Timestamp(cfg.end)
     ticker_day = aggregate_reddit(article_ticker, activity, cfg)
     by_sub = aggregate_by_subreddit(article_ticker, activity, cfg)
 
