@@ -16,8 +16,7 @@ AI 섹터 종목의 n 거래일 뒤 주가 흐름을 예측할 수 있다. 현�
 ```
 
 - **모델 A — 정형 데이터:** 공개 사전학습 시계열 모델 **Chronos-2**에 가격·거래량을, 매크로는 외부 변수(공변량)로
-  넣는다. 코드는 `notebooks/modelA_predict.ipynb`(Colab 노트북)이고 데이터는 레포에 올리지 않는다. 예측 CSV는
-  `src/capstone/models/model_a/forecaster.html`을 브라우저로 열고 끌어다 놓으면 채점·시각화된다. 출력은 `date, ticker, target_date, close, real_ret, pred_ret, pred_q10,
+  넣는다. 코드는 `notebooks/modelA_predict.ipynb`(Colab 노트북)이고 데이터는 레포에 올리지 않는다. 출력은 `date, ticker, target_date, close, real_ret, pred_ret, pred_q10,
   pred_q90, residual` 형태의 CSV다.
 - **모델 B — 텍스트 데이터:** 뉴스와 Reddit에서 종목별 **언급량(강도)과 감성(방향)의 "평소 대비 편차"** 및 둘의
   곱을 만들어 ε를 예측한다. 뉴스와 Reddit은 50:50으로 반영하되, 글 수가 훨씬 많은 Reddit의 글 하나당
