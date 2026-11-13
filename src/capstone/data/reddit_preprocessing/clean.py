@@ -20,7 +20,7 @@ AT_COLUMNS = [
     "publisher", "is_primary", "is_broad", "title", "summary",
     # Reddit 고유
     "subreddit", "kind", "is_name_only", "is_short", "is_removed", "is_edited", "n_other_tickers",
-    "author_hash", "text_for_sentiment", "link_title", "source_ids",
+    "author_hash", "text_for_sentiment", "link_title", "source_ids", "sample_weight",
 ]
 
 
@@ -55,11 +55,14 @@ def normalize_body(text) -> str | None:
 def merge_copies(df: pd.DataFrame) -> pd.DataFrame:
     """(subreddit, 귀속일, 정규화 본문)이 같은 글을 묶는다. 대표 = 가장 먼저 올라온 글."""
     df = df.sort_values(["published_utc", "article_id"]).reset_index(drop=True)
+    if "sample_weight" not in df:
+        df = df.assign(sample_weight=1.0)
     key = pd.Series(list(zip(df["subreddit"], df["attributed_day"], df["text_for_sentiment"].map(normalize_body))))
     group = key.factorize()[0]
     rep = df.groupby(group, sort=False).head(1).copy()
     g = df.groupby(group, sort=False)
-    rep["n_rows"] = g.size().to_numpy()
+    # n_rows = 합쳐진 원본 수(표본 수집분은 가중 합). 대표 글의 sample_weight는 그대로 둔다
+    rep["n_rows"] = g["sample_weight"].sum().to_numpy()
     rep["source_ids"] = g["article_id"].agg(list).to_numpy()
     rep["is_edited"] = g["is_edited"].any().to_numpy()
     return rep.reset_index(drop=True)
@@ -90,6 +93,6 @@ def explode_by_ticker(articles: pd.DataFrame, cfg: Config, title_tickers) -> pd.
                 "is_short": rec.is_short, "is_removed": rec.is_removed, "is_edited": rec.is_edited,
                 "n_other_tickers": rec.n_other_tickers, "author_hash": rec.author_hash,
                 "text_for_sentiment": rec.text_for_sentiment, "link_title": rec.link_title,
-                "source_ids": rec.source_ids,
+                "source_ids": rec.source_ids, "sample_weight": getattr(rec, "sample_weight", 1.0),
             })
     return pd.DataFrame(rows, columns=AT_COLUMNS)

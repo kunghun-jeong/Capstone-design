@@ -25,13 +25,16 @@ def _process(args) -> tuple[pd.DataFrame, pd.DataFrame]:
     return process_file(*args)
 
 
-def build_stage1(files: list[tuple[Path, str, str]], cfg: Config, workers: int = 1) -> tuple[pd.DataFrame, pd.DataFrame]:
+def build_stage1(files: list[tuple[Path, str, str]], cfg: Config, workers: int = 1,
+                 parts: list[tuple[pd.DataFrame, pd.DataFrame]] | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """JSONL 원본(files)과 미리 만든 1단계 조각(parts: 덤프 처리 결과 등)을 합친다."""
     jobs = [(path, sub, kind, cfg) for path, sub, kind in files]
-    if workers > 1:
+    if workers > 1 and len(jobs) > 1:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             results = list(pool.map(_process, jobs))
     else:
         results = [_process(j) for j in jobs]
+    results += list(parts or [])
     rows = pd.concat([r for r, _ in results if not r.empty], ignore_index=True) if results else pd.DataFrame(columns=ROW_COLUMNS)
     if rows.empty:
         raise ValueError("유니버스 종목이 언급된 글이 없습니다. 입력 경로/티커를 확인하세요.")
@@ -51,6 +54,9 @@ def build_article_ticker(rows: pd.DataFrame, cfg: Config) -> tuple[pd.DataFrame,
     """
     lo, hi = pd.Timestamp(cfg.baseline_start), pd.Timestamp(cfg.end)
     rows = rows[rows["attributed_day"].between(lo, hi)].reset_index(drop=True)
+    if "sample_weight" not in rows:      # 가중치 도입 전에 만든 1단계 결과
+        rows["sample_weight"] = 1.0
+    rows["sample_weight"] = rows["sample_weight"].fillna(1.0)
     stats: dict = {"stage1_rows_in_range": len(rows)}
 
     mention = rows[rows["n_tags"] > 0] if not cfg.include_name_only else rows
@@ -91,18 +97,32 @@ def _base_log(cfg_path: Path, root: Path) -> dict:
     }
 
 
+def load_parts(dirs: list[Path]) -> tuple[list[tuple[pd.DataFrame, pd.DataFrame]], list[Path]]:
+    """``<name>.rows.parquet`` + ``<name>.activity.parquet`` 쌍을 읽는다(덤프 처리 결과, 이전 1단계 결과 등)."""
+    parts, used = [], []
+    for d in dirs:
+        for rows_path in sorted(Path(d).glob("*.rows.parquet")):
+            act_path = rows_path.with_name(rows_path.name.replace(".rows.parquet", ".activity.parquet"))
+            if not act_path.exists():
+                raise FileNotFoundError(f"짝이 되는 활동량 파일이 없습니다: {act_path}")
+            parts.append((pd.read_parquet(rows_path), pd.read_parquet(act_path)))
+            used += [rows_path, act_path]
+    return parts, used
+
+
 def run_stage1(cfg: Config, root: Path, config_path: Path, workers: int | None = None) -> dict:
-    files = list_raw_files([root / p for p in cfg.paths["raw"]])
-    if not files:
-        raise FileNotFoundError(f"입력 JSONL이 없습니다: {cfg.paths['raw']}")
-    rows, activity = build_stage1(files, cfg, workers or max(1, (os.cpu_count() or 2) - 2))
+    files = list_raw_files([root / p for p in cfg.paths.get("raw", [])])
+    parts, part_files = load_parts([root / p for p in cfg.paths.get("stage1_parts", [])])
+    if not files and not parts:
+        raise FileNotFoundError(f"입력이 없습니다: raw={cfg.paths.get('raw')}, stage1_parts={cfg.paths.get('stage1_parts')}")
+    rows, activity = build_stage1(files, cfg, workers or max(1, (os.cpu_count() or 2) - 2), parts)
     interim = root / cfg.paths["interim"]
     interim.mkdir(parents=True, exist_ok=True)
     rows.to_parquet(interim / "posts_comments.parquet", index=False)
     activity.to_parquet(interim / "daily_activity.parquet", index=False)
     log = {
         **_base_log(config_path, root),
-        "inputs": {str(p.relative_to(root)): _sha256(p) for p, _, _ in files},
+        "inputs": {str(p.relative_to(root)): _sha256(p) for p in [f for f, _, _ in files] + part_files},
         "rows": {"posts_comments": len(rows), "daily_activity": len(activity), "raw_items": int(activity["n_items"].sum())},
     }
     (interim / "_run_stage1.json").write_text(json.dumps(log, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")

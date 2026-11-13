@@ -50,8 +50,9 @@ def load_config(path: Path) -> Config:
     period = raw["period"]
     base = raw["baseline"]
     paths = dict(raw.get("paths") or {})
-    if isinstance(paths.get("raw"), str):
-        paths["raw"] = [paths["raw"]]
+    for key in ("raw", "stage1_parts"):
+        if isinstance(paths.get(key), str):
+            paths[key] = [paths[key]]
     cfg = Config(
         tickers=_str_list(raw["tickers"], "tickers"),
         baseline_start=_as_date(period["baseline_start"], "period.baseline_start"),

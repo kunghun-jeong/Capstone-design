@@ -20,14 +20,19 @@ SENTIMENT_COLUMNS = [
 
 
 def _daily(use: pd.DataFrame, suffix: str = "") -> pd.DataFrame:
+    """평균·비율은 sample_weight 가중(표본 수집분). n_scored는 실제로 점수를 매긴 글 수."""
+    use = use.assign(_w=use["sample_weight"] if "sample_weight" in use else 1.0)
+    use = use.assign(_ws=use["_w"] * use["sent_score"], _wp=use["_w"] * (use["sent_label"] == "positive"),
+                     _wn=use["_w"] * (use["sent_label"] == "negative"))
     g = use.groupby(["ticker", "attributed_day"])
+    wsum = g["_w"].sum()
     out = pd.DataFrame({
         f"n_scored{suffix}": g.size(),
-        f"sent_mean{suffix}": g["sent_score"].mean(),
+        f"sent_mean{suffix}": g["_ws"].sum() / wsum,
     })
     if not suffix:
-        out["sent_pos_share"] = g["sent_label"].agg(lambda s: (s == "positive").mean())
-        out["sent_neg_share"] = g["sent_label"].agg(lambda s: (s == "negative").mean())
+        out["sent_pos_share"] = g["_wp"].sum() / wsum
+        out["sent_neg_share"] = g["_wn"].sum() / wsum
     return out
 
 

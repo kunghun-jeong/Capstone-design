@@ -33,6 +33,8 @@ ROW_COLUMNS = [
     "is_deleted_text", "is_bot", "is_mod", "is_stickied", "is_link_only", "is_removed", "is_short", "is_edited",
     # 분석용(피처·필터 금지): 첫 수집 이후에 바뀐 값
     "score_t36h", "num_comments_t36h", "has_2nd_retrieval", "was_deleted_later",
+    # 표본 수집분의 가중치(이 글 하나가 대표하는 원본 글 수). 전체 수집분은 1
+    "sample_weight",
 ]
 ACTIVITY_FLAGS = ["is_deleted_text", "is_bot", "is_mod", "is_stickied", "is_link_only", "is_removed", "is_short", "is_edited"]
 
@@ -130,7 +132,8 @@ def _item(rec: dict, kind: str, cfg: Config, matcher: TickerMatcher, bots: set[s
         "is_edited": bool(rec.get("edited")) or bool(meta.get("is_edited")),
     }
     tickers, names, other = matcher.match(text)
-    item = {"created_utc": rec["created_utc"], **flags, "_mention": bool(tickers or names)}
+    item = {"created_utc": rec["created_utc"], **flags, "_mention": bool(tickers or names),
+            "sample_weight": float(rec.get("_sample_weight", 1.0))}
     if item["_mention"]:
         permalink = rec.get("permalink")
         item.update({
@@ -174,13 +177,17 @@ def list_raw_files(raw_dirs: list[Path]) -> list[tuple[Path, str, str]]:
 
 def process_file(path: Path, subreddit: str, kind: str, cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
     """원본 파일 1개 → (언급 행 DataFrame, 귀속일별 활동량 DataFrame)."""
-    matcher = TickerMatcher(cfg.tickers, cfg.ticker_patterns, cfg.aliases, cfg.other_tickers)
-    bots = {b.lower() for b in cfg.bots}
-    items = []
     with Path(path).open(encoding="utf-8") as fh:
-        for line in fh:
-            if line.strip():
-                items.append(_item(json.loads(line), kind, cfg, matcher, bots))
+        return process_records((json.loads(line) for line in fh if line.strip()), subreddit, kind, cfg)
+
+
+def process_records(records, subreddit: str, kind: str, cfg: Config,
+                    matcher: TickerMatcher | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """원본 레코드(dict) 묶음 → (언급 행, 귀속일별 활동량). 덤프처럼 큰 입력은 묶음별로 나눠 부르고 결과를 합친다
+    (활동량은 (subreddit, kind, day)별 합이라 나눠 세도 같다)."""
+    matcher = matcher or TickerMatcher(cfg.tickers, cfg.ticker_patterns, cfg.aliases, cfg.other_tickers)
+    bots = {b.lower() for b in cfg.bots}
+    items = [_item(rec, kind, cfg, matcher, bots) for rec in records]
     if not items:
         return pd.DataFrame(columns=ROW_COLUMNS), pd.DataFrame()
 
@@ -192,9 +199,15 @@ def process_file(path: Path, subreddit: str, kind: str, cfg: Config) -> tuple[pd
     noise = flags[["is_deleted_text", "is_bot", "is_mod", "is_stickied", "is_link_only"]].any(axis=1)
     flags["is_clean"] = ~noise
     flags["is_clean_excl_removed"] = ~noise & ~flags["is_removed"]
-    flags["day"] = days.values
-    activity = flags.groupby("day").agg(
-        n_items=("is_clean", "size"),
+    # 건수는 가중 합(표본 수집분은 추정 원본 수, 전체 수집분은 그대로 건수)
+    w = pd.Series([it["sample_weight"] for it in items], index=flags.index)
+    counts = flags.astype(float).mul(w, axis=0)
+    counts["n_items"] = w
+    counts["n_items_sampled"] = 1
+    counts["day"] = days.values
+    activity = counts.groupby("day").agg(
+        n_items=("n_items", "sum"),
+        n_items_sampled=("n_items_sampled", "sum"),
         **{f"n_{f.removeprefix('is_')}": (f, "sum") for f in ACTIVITY_FLAGS},
         n_clean=("is_clean", "sum"),
         n_clean_excl_removed=("is_clean_excl_removed", "sum"),
