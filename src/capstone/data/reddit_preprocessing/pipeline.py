@@ -105,7 +105,10 @@ def load_parts(dirs: list[Path]) -> tuple[list[tuple[pd.DataFrame, pd.DataFrame]
             act_path = rows_path.with_name(rows_path.name.replace(".rows.parquet", ".activity.parquet"))
             if not act_path.exists():
                 raise FileNotFoundError(f"짝이 되는 활동량 파일이 없습니다: {act_path}")
-            parts.append((pd.read_parquet(rows_path), pd.read_parquet(act_path)))
+            act = pd.read_parquet(act_path)
+            if "n_items_sampled" not in act:     # 가중치 도입 전에 만든 조각 = 전체 수집
+                act["n_items_sampled"] = act["n_items"]
+            parts.append((pd.read_parquet(rows_path), act))
             used += [rows_path, act_path]
     return parts, used
 

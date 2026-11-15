@@ -342,7 +342,7 @@ def test_overlapping_raw_dirs_are_rejected(tmp_path):
 def test_repo_config_loads():
     cfg = load_config(REPO / "configs" / "reddit_preprocessing.yaml")
     assert len(cfg.tickers) == 10 and "GOOG" not in cfg.tickers
-    assert cfg.start == date(2026, 5, 1) and cfg.end == date(2026, 9, 30)
+    assert cfg.start == date(2021, 1, 4) and cfg.end == date(2026, 9, 30)
 
 
 def test_config_rejects_boolean_ticker(tmp_path):

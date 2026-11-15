@@ -4,6 +4,12 @@
 - 요청: 팀장 — "2021년부터 6개월치와 같은 방법으로 수집 + 전처리까지, 이번 주말까지. 이후 선형·XGBoost·MLP."
 - 이전 작업: `reports/reddit_arctic_shift_report.md`(6개월 수집), `docs/plans/reddit_preprocessing_plan.md`(전처리)
 
+## 0. 진행 결과 (2026-11-15)
+
+- 덤프 토렌트가 11-14 07:37에 끝나 **2020-10~2024-12는 WSB 댓글까지 덤프(전체)**로 처리했다. API 표본은 2025-01~2026-01 WSB 댓글에만 썼다.
+- 전처리 1~2단계 완료: `data/processed/reddit_2021/`. 결과는 `reports/reddit_2021_extension_report.md`.
+- 아래 2·4절은 토렌트가 끝나기 전(11-14 04시) 계획이다.
+
 ## 1. 기간
 
 | 구간 | UTC | 용도 |
