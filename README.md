@@ -58,6 +58,7 @@ python scripts/fetch_reddit.py ...
 python scripts/preprocess_news.py          # 1단계: 정규화 · 거래일 귀속 · 중복 제거 · 종목·일 집계
 python scripts/score_news_sentiment.py     # 2단계: 노이즈 표시 · FinBERT 점수 · 종목·일 감성 피처
 python scripts/preprocess_reddit.py        # Reddit 1~2단계 (같은 방식)
+python scripts/score_reddit_sentiment.py   # Reddit FinBERT 감성 · 종목·일 감성 피처
 ```
 
 노이즈는 행을 지우지 않고 `drop_reason`/플래그로 표시하고, 감성 집계에서만 제외한다. 결과물은
@@ -77,12 +78,11 @@ python scripts/preprocess_reddit.py        # Reddit 1~2단계 (같은 방식)
 
 ## 현재 상태 (2026-11 초)
 
-- **완료:** 뉴스·Reddit 수집, 뉴스 전처리 + FinBERT 감성(`main`), Reddit 전처리(`main`), 모델 A 출력 수령
+- **완료:** 뉴스·Reddit 수집, 뉴스 전처리 + FinBERT 감성(`main`), Reddit 전처리 + FinBERT 감성(`main`), 모델 A 출력 수령
 - **탐색 결과:** 선형(릿지) 모델로 뉴스·Reddit 텍스트 입력의 효과를 시험했으나 통계적으로 검출되지 않았다. 입력
   6개 모두 가중치의 95% 신뢰구간이 0을 포함했다. 또 모델 A 자체에 종목 간 예측력이 거의 없어(IC ≈ −0.01) ε가 사실상
   실제 수익률과 같아진다. 이 실험 코드는 아직 레포에 없다.
 - **TBD:**
-  - Reddit 감성 점수 코드 — PR #9가 `main`이 아닌 `feature/reddit-preprocessing`으로 머지돼, `main` 대상 PR이 필요하다
   - 모델 B 학습·평가 코드, 글 단위 가중치 구현
   - `configs/universe.yaml`은 아직 반도체 9종목의 임시 목록이다(실제 사용 목록은 `configs/news_preprocessing.yaml`)
   - Reddit 감성의 SocBERT 적용, 표본 확대(구간 연장)

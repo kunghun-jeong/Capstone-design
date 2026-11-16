@@ -1,0 +1,20 @@
+# Reddit 글 감성 점수(FinBERT) → 종목·일 감성 피처. 기간·베이스라인 창·입력 경로는 preprocessing 설정을 따른다.
+preprocessing_config: configs/reddit_preprocessing.yaml
+
+model:
+  name: ProsusAI/finbert
+  revision: 0bc2ac10dda6929bcb1f77ccc43c7ec5c424f031   # Hugging Face 커밋 고정(재현용)
+  max_length: 512        # 뉴스 계획 6번과 같다. 이보다 긴 글(약 0.5%)은 앞부분만 쓴다.
+  batch_size: 128
+  device: auto           # auto = mps > cuda > cpu
+  half_precision: auto   # auto = mps/cuda에서 fp16. 표본 4,000건에서 fp32 대비 라벨 일치 100%, 확률 차 최대 0.003
+
+# 20자 미만(is_short) 글은 감성 입력에서 뺀다(전처리 계획 ③). 언급량에는 이미 들어 있다.
+exclude_short: true
+
+# 일별 평균 감성(-1~1) robust z의 분모 하한. 실측(리포트 3절) 후 정했다.
+sentiment_scale_floor: 0.02
+
+paths:
+  scores: data/interim/reddit/sentiment_scores.parquet       # 글 단위 점수(캐시, 이어서 계산)
+  output: data/processed/reddit/ticker_day_sentiment.parquet # 종목·일: 언급량 + 감성 + 상호작용
