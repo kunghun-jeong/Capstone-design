@@ -35,11 +35,11 @@ aliases:
 other_tickers: [SNDK, INTC, QCOM, ARM, ASML, SMCI, AAPL, TSLA, PLTR, ORCL, SPY, QQQ, SOXX, SMH, SOXL]
 
 # 귀속 거래일 기준(양끝 포함). baseline_start부터는 베이스라인 계산에만 쓰고 산출물은 start~end만 낸다.
-# 추가 수집분(data/raw/reddit_backfill)은 2026-02-01 00:00 UTC(1/31 19:00 ET)부터라 2/2 거래일은
-# 1/30 장 마감 후 글이 빠진 불완전한 날이다 → 2/3부터. 4/24는 기존 수집분과 이어져 온전하다.
+# 2021 확장(docs/plans/reddit_2021_extension_plan.md): 덤프가 2020-10-01 00:00 UTC(9/30 20:00 ET)부터라
+# 10/1 거래일은 9/30 장 마감 후 글이 빠진 불완전한 날이다 → 10/2부터. 2021-01-04에 60거래일 이상 쌓인다.
 period:
-  baseline_start: 2026-02-03
-  start: 2026-05-01
+  baseline_start: 2020-10-02
+  start: 2021-01-04
   end: 2026-09-30
 
 # 귀속 컷오프: 뉴스와 같다("close" = 해당 거래일 실제 장 마감).
@@ -72,7 +72,14 @@ bots: [AutoModerator, VisualMod, verified-trader, RemindMeBot, sneakpeekbot, WSB
 author_salt: skku-capstone-reddit
 
 paths:
-  # reddit_backfill: 2/1~4/23 추가 수집분(2026-11-04 완료). 두 폴더의 글 ID가 겹치면 1단계에서 오류를 낸다.
-  raw: [data/raw/reddit, data/raw/reddit_backfill]
-  interim: data/interim/reddit
-  processed: data/processed/reddit
+  # JSONL 원본(<raw>/<subreddit>/<posts|comments>/<YYYY-MM>.jsonl)
+  #  - reddit_2025api: 2025-01~2026-01 API 수집(작은 서브레딧 6곳 + WSB 게시글)
+  #  - reddit_sample: 2025-01~2026-01 WSB 댓글 시간당 표본(_sample_weight). 전체 수집(reddit_2025api_wsb_comments)이
+  #    끝나면 이 줄을 그 폴더로 바꾼다 — 같은 달 표본과 전체를 함께 넣으면 글 ID 중복 오류가 난다.
+  raw: [data/raw/reddit_2025api, data/raw/reddit_sample]
+  # 1단계 조각(*.rows.parquet + *.activity.parquet)
+  #  - dump_*: 2020-10~2024-12 서브레딧 덤프(scripts/preprocess_reddit_dump.py)
+  #  - api_2026-02_2026-10: 기존 수집분(data/raw/reddit + reddit_backfill)의 1단계 결과
+  stage1_parts: [data/interim/reddit_parts]
+  interim: data/interim/reddit_2021
+  processed: data/processed/reddit_2021
