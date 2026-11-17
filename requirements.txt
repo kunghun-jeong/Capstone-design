@@ -9,3 +9,6 @@ pandas_market_calendars
 beautifulsoup4
 torch
 transformers
+scikit-learn
+xgboost
+scipy
